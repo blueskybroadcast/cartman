@@ -2,8 +2,11 @@ module Cartman
   class Cart
     CART_LINE_ITEM_ID_KEY = "cartman:line_item:id"
 
-    def initialize(uid)
+    attr_reader :discounted
+
+    def initialize(uid, discounted = false)
       @uid = uid
+      @discounted = redis.get(discounted_key).to_i || discounted
     end
 
     def add_item(options)
@@ -118,10 +121,19 @@ module Cartman
       "cart/#{@uid}-#{version}"
     end
 
+    def set_discounted(value)
+      redis.set discounted_key, value
+      @discounted = value
+    end
+
     private
 
     def key(id=@uid)
       "cartman:cart:#{id}"
+    end
+
+    def discounted_key(id=@uid)
+      "cartman:cart:#{id}:discounted"
     end
 
     def index_key(id=@uid)

@@ -9,6 +9,18 @@ describe Cartman do
       Cartman.config.redis.flushdb
     end
 
+    describe "#set_discounted" do
+      it "sets new value for discounted" do
+        cart.set_discounted 5
+        cart.discounted.should be 5
+      end
+
+      it "sets new redis value in redis" do
+        cart.set_discounted 5
+        Cartman.config.redis.get(cart.send(:discounted_key)).should be_eql '5'
+      end
+    end
+
     describe "#key" do
       it "should return a proper key string" do
         cart.send(:key).should eq("cartman:cart:1")
@@ -21,11 +33,11 @@ describe Cartman do
       end
 
       it "creates a line item key" do
-        Cartman.config.redis.exists("cartman:line_item:1").should be_true
+        Cartman.config.redis.exists("cartman:line_item:1").should be_truthy
       end
 
       it "adds that line item key's id to the cart set" do
-        Cartman.config.redis.sismember(cart.send(:key), 1).should be_true
+        Cartman.config.redis.sismember(cart.send(:key), 1).should be_truthy
       end
 
       it "should expire the line_item_keys in the amount of time specified" do
@@ -34,8 +46,8 @@ describe Cartman do
       end
 
       it "should add an index key to be able to look up by type and ID" do
-        Cartman.config.redis.exists("cartman:cart:1:index").should be_true
-        Cartman.config.redis.sismember("cartman:cart:1:index", "Bottle:17").should be_true
+        Cartman.config.redis.exists("cartman:cart:1:index").should be_truthy
+        Cartman.config.redis.sismember("cartman:cart:1:index", "Bottle:17").should be_truthy
       end
 
       it "should squack if type and/or ID are not set" do
@@ -55,18 +67,18 @@ describe Cartman do
         item = cart.add_item(id: 17, type: "Bottle", name: "Bordeux", unit_cost: 92.12, quantity: 2)
         item_id = item._id
         cart.remove_item(item)
-        Cartman.config.redis.sismember(cart.send(:key), item_id).should be_false
-        Cartman.config.redis.exists("cartman:line_item:#{item_id}").should be_false
+        Cartman.config.redis.sismember(cart.send(:key), item_id).should be_falsey
+        Cartman.config.redis.exists("cartman:line_item:#{item_id}").should be_falsey
       end
 
       it "should not delete the indecies for other items" do
         item = cart.add_item(id: 17, type: "Bottle", name: "Bordeux", unit_cost: 92.12, quantity: 2)
         item2 = cart.add_item(id: 18, type: "Bottle", name: "Bordeux", unit_cost: 92.12, quantity: 2)
-        Cartman.config.redis.exists("cartman:cart:1:index:Bottle:17").should be_true
-        Cartman.config.redis.exists("cartman:cart:1:index:Bottle:18").should be_true
+        Cartman.config.redis.exists("cartman:cart:1:index:Bottle:17").should be_truthy
+        Cartman.config.redis.exists("cartman:cart:1:index:Bottle:18").should be_truthy
         cart.remove_item(item)
-        Cartman.config.redis.exists("cartman:cart:1:index:Bottle:17").should be_false
-        Cartman.config.redis.exists("cartman:cart:1:index:Bottle:18").should be_true
+        Cartman.config.redis.exists("cartman:cart:1:index:Bottle:17").should be_falsey
+        Cartman.config.redis.exists("cartman:cart:1:index:Bottle:18").should be_truthy
       end
     end
 
@@ -106,18 +118,18 @@ describe Cartman do
       end
 
       it "should be able to tell you that an item in the cart is present" do
-        cart.contains?(Bottle.new(17)).should be_true
+        cart.contains?(Bottle.new(17)).should be_truthy
       end
 
       it "should be able to tell you that an item in the cart is absent" do
-        cart.contains?(Bottle.new(20)).should be_false
+        cart.contains?(Bottle.new(20)).should be_falsey
       end
 
       it "should be able to tell you that an item in the cart is absent if it's been removed" do
         cart.remove_item(cart.items.first)
-        cart.contains?(Bottle.new(17)).should be_false
+        cart.contains?(Bottle.new(17)).should be_falsey
         cart.remove_item(cart.items.last)
-        cart.contains?(Bottle.new(34)).should be_false
+        cart.contains?(Bottle.new(34)).should be_falsey
       end
     end
 
@@ -196,11 +208,11 @@ describe Cartman do
         cart.add_item(id: 17, type: "Bottle", name: "Bordeux", unit_cost: 92.12, cost_in_cents: 18424, quantity: 2)
         cart.add_item(id: 34, type: "Bottle", name: "Cabernet", unit_cost: 92.12, cost_in_cents: 18424, quantity: 2)
         cart.destroy!
-        Cartman.config.redis.exists("cartman:cart:1").should be_false
-        Cartman.config.redis.exists("cartman:line_item:1").should be_false
-        Cartman.config.redis.exists("cartman:line_item:2").should be_false
-        Cartman.config.redis.exists("cartman:cart:1:index").should be_false
-        Cartman.config.redis.exists("cartman:cart:1:index:Bottle:17").should be_false
+        Cartman.config.redis.exists("cartman:cart:1").should be_falsey
+        Cartman.config.redis.exists("cartman:line_item:1").should be_falsey
+        Cartman.config.redis.exists("cartman:line_item:2").should be_falsey
+        Cartman.config.redis.exists("cartman:cart:1:index").should be_falsey
+        Cartman.config.redis.exists("cartman:cart:1:index:Bottle:17").should be_falsey
       end
     end
 
@@ -233,20 +245,20 @@ describe Cartman do
         cart.reassign(2)
         cart.items.size.should be(2)
         Cartman::Cart.new(2).quantity.should be(4)
-        Cartman.config.redis.exists("cartman:cart:1").should be_false
-        Cartman.config.redis.exists("cartman:cart:1:index").should be_false
-        Cartman.config.redis.exists("cartman:cart:1:index:Bottle:17").should be_false
-        Cartman.config.redis.exists("cartman:cart:2").should be_true
-        Cartman.config.redis.exists("cartman:cart:2:index").should be_true
-        Cartman.config.redis.exists("cartman:cart:2:index:Bottle:17").should be_true
+        Cartman.config.redis.exists("cartman:cart:1").should be_falsey
+        Cartman.config.redis.exists("cartman:cart:1:index").should be_falsey
+        Cartman.config.redis.exists("cartman:cart:1:index:Bottle:17").should be_falsey
+        Cartman.config.redis.exists("cartman:cart:2").should be_truthy
+        Cartman.config.redis.exists("cartman:cart:2:index").should be_truthy
+        Cartman.config.redis.exists("cartman:cart:2:index:Bottle:17").should be_truthy
         cart.send(:key)[-1].should eq("2")
         cart.add_item(id: 19, type: "Bottle", name: "Bordeux", unit_cost: 92.12, cost_in_cents: 18424, quantity: 2)
         cart.reassign(1)
         cart.items.size.should be(3)
-        Cartman.config.redis.exists("cartman:cart:2").should be_false
-        Cartman.config.redis.exists("cartman:cart:2:index").should be_false
-        Cartman.config.redis.exists("cartman:cart:1").should be_true
-        Cartman.config.redis.exists("cartman:cart:1:index").should be_true
+        Cartman.config.redis.exists("cartman:cart:2").should be_falsey
+        Cartman.config.redis.exists("cartman:cart:2:index").should be_falsey
+        Cartman.config.redis.exists("cartman:cart:1").should be_truthy
+        Cartman.config.redis.exists("cartman:cart:1:index").should be_truthy
         cart.send(:key)[-1].should eq("1")
       end
     end
