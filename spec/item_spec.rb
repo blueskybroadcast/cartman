@@ -42,8 +42,8 @@ describe Cartman do
       it "should remove the item from the cart" do
         item_id = item._id
         item.destroy
-        Cartman.config.redis.sismember(cart.send(:key), item_id).should be_false
-        Cartman.config.redis.exists("cartman:line_item:#{item_id}").should be_false
+        Cartman.config.redis.sismember(cart.send(:key), item_id).should be_falsey
+        Cartman.config.redis.exists("cartman:line_item:#{item_id}").should be_falsey
       end
     end
 
@@ -59,6 +59,5 @@ describe Cartman do
         item.cache_key.should eq("item/#{item._id}-#{item._version}")
       end
     end
-
   end
 end
