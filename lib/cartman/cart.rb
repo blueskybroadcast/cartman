@@ -73,6 +73,7 @@ module Cartman
     def destroy!
       keys = line_item_keys
       keys << key
+      keys << discounted_key
       keys << index_key
       keys << index_keys
       keys.flatten!

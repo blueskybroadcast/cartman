@@ -205,9 +205,11 @@ describe Cartman do
 
     describe "#destroy" do
       it "should delete the line_item keys, the index key, and the cart key" do
+        cart.set_discounted 5
         cart.add_item(id: 17, type: "Bottle", name: "Bordeux", unit_cost: 92.12, cost_in_cents: 18424, quantity: 2)
         cart.add_item(id: 34, type: "Bottle", name: "Cabernet", unit_cost: 92.12, cost_in_cents: 18424, quantity: 2)
         cart.destroy!
+        Cartman.config.redis.exists("cartman:cart:1:discounted").should be_falsey
         Cartman.config.redis.exists("cartman:cart:1").should be_falsey
         Cartman.config.redis.exists("cartman:line_item:1").should be_falsey
         Cartman.config.redis.exists("cartman:line_item:2").should be_falsey
