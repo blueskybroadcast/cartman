@@ -4,9 +4,9 @@ module Cartman
 
     attr_reader :discounted
 
-    def initialize(uid, discounted = false)
+    def initialize(uid, discounted = '')
       @uid = uid
-      @discounted = redis.get(discounted_key).to_i || discounted
+      @discounted = redis.get(discounted_key) || discounted
     end
 
     def add_item(options)
