@@ -2,11 +2,31 @@ module Cartman
   class Cart
     CART_LINE_ITEM_ID_KEY = "cartman:line_item:id"
 
-    attr_reader :discounted
-
-    def initialize(uid, discounted = '')
+    def initialize(uid)
       @uid = uid
-      @discounted = redis.get(discounted_key) || discounted
+    end
+
+    def apply_coupon?(coupon_id, coupon_code, product_id, product_type)
+      item = find_item_by_product product_id, product_type
+      return false unless item
+      return false if item.coupon_id == coupon_id
+      item.coupon_id = coupon_id
+      item.coupon_code = coupon_code
+    end
+
+    def remove_coupon?(coupon_id, coupon_code, product_id, product_type)
+      item = find_item_by_product product_id, product_type
+      return false unless item
+      return false unless item.coupon_id == coupon_id
+      item.coupon_id = nil
+      item.coupon_code = nil
+    end
+
+    def find_item_by_product(product_id, product_type)
+      items.each do |item|
+        return item if item.product_id == product_id && item.product_type == product_type
+      end
+      nil
     end
 
     def add_item(options)
@@ -73,7 +93,6 @@ module Cartman
     def destroy!
       keys = line_item_keys
       keys << key
-      keys << discounted_key
       keys << index_key
       keys << index_keys
       keys.flatten!
@@ -122,19 +141,10 @@ module Cartman
       "cart/#{@uid}-#{version}"
     end
 
-    def set_discounted(value)
-      redis.set discounted_key, value
-      @discounted = value
-    end
-
     private
 
     def key(id=@uid)
       "cartman:cart:#{id}"
-    end
-
-    def discounted_key(id=@uid)
-      "cartman:cart:#{id}:discounted"
     end
 
     def index_key(id=@uid)

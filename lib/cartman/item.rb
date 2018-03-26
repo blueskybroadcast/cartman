@@ -10,6 +10,18 @@ module Cartman
       @id
     end
 
+    def coupon_id
+      @data.fetch 'coupon_id'
+    rescue
+      nil
+    end
+
+    def coupon_code
+      @data.fetch 'coupon_code'
+    rescue
+      nil
+    end
+
     def cost
       unit_cost = BigDecimal(@data.fetch(Cartman.config.unit_cost_field))
       quantity = @data.fetch(Cartman.config.quantity_field).to_i
