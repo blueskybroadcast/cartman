@@ -6,25 +6,32 @@ module Cartman
       @uid = uid
     end
 
-    def apply_coupon?(coupon_id, coupon_code, product_id, product_type)
+    def any_coupons?
+      items.each { |item| return true unless item.value(:coupon_id).blank? }
+      false
+    end
+
+    def apply_coupon?(coupon_id, coupon_code, product_id, product_type, discount)
       item = find_item_by_product product_id, product_type
       return false unless item
       return false if item.coupon_id == coupon_id
       item.coupon_id = coupon_id
       item.coupon_code = coupon_code
+      item.discount = discount
     end
 
-    def remove_coupon?(coupon_id, coupon_code, product_id, product_type)
+    def remove_coupon?(product_id, product_type)
       item = find_item_by_product product_id, product_type
       return false unless item
-      return false unless item.coupon_id == coupon_id
       item.coupon_id = nil
       item.coupon_code = nil
+      item.discount = nil
+      true
     end
 
     def find_item_by_product(product_id, product_type)
       items.each do |item|
-        return item if item.product_id == product_id && item.product_type == product_type
+        return item if item.id.to_i == product_id.to_i && item.type.downcase == product_type.downcase
       end
       nil
     end

@@ -10,6 +10,14 @@ module Cartman
       @id
     end
 
+    def value(key)
+      val = @data.fetch(key.to_sym)
+      return nil if val.blank?
+      val
+    rescue
+      return nil
+    end
+
     def coupon_id
       @data.fetch 'coupon_id'
     rescue
