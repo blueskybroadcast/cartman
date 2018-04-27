@@ -9,18 +9,6 @@ describe Cartman do
       Cartman.config.redis.flushdb
     end
 
-    describe "#set_discounted" do
-      it "sets new value for discounted" do
-        cart.set_discounted 'some code'
-        cart.discounted.should be_eql 'some code'
-      end
-
-      it "sets new redis value in redis" do
-        cart.set_discounted 'some code'
-        Cartman.config.redis.get(cart.send(:discounted_key)).should be_eql 'some code'
-      end
-    end
-
     describe "#key" do
       it "should return a proper key string" do
         cart.send(:key).should eq("cartman:cart:1")
@@ -205,11 +193,9 @@ describe Cartman do
 
     describe "#destroy" do
       it "should delete the line_item keys, the index key, and the cart key" do
-        cart.set_discounted 'some code'
         cart.add_item(id: 17, type: "Bottle", name: "Bordeux", unit_cost: 92.12, cost_in_cents: 18424, quantity: 2)
         cart.add_item(id: 34, type: "Bottle", name: "Cabernet", unit_cost: 92.12, cost_in_cents: 18424, quantity: 2)
         cart.destroy!
-        Cartman.config.redis.exists("cartman:cart:1:discounted").should be_falsey
         Cartman.config.redis.exists("cartman:cart:1").should be_falsey
         Cartman.config.redis.exists("cartman:line_item:1").should be_falsey
         Cartman.config.redis.exists("cartman:line_item:2").should be_falsey
