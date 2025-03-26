@@ -8,7 +8,7 @@ describe Cartman do
       Cartman.config.redis.flushdb
       Object.send(:remove_const, :Bottle) if defined?(Bottle)
       Bottle = double
-      Bottle.stub(:find).and_return(bottle)
+      allow(Bottle).to receive(:find).and_return(bottle)
     end
 
     describe "#each_with_object" do

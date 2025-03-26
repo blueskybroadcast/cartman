@@ -39,12 +39,12 @@ module Cartman
     def add_item(options)
       raise "Must specify both :id and :type" unless options.has_key?(:id) && options.has_key?(:type)
       line_item_id = redis.incr CART_LINE_ITEM_ID_KEY
-      redis.pipelined do
-        redis.mapped_hmset("cartman:line_item:#{line_item_id}", options)
-        redis.hincrby("cartman:line_item:#{line_item_id}", :_version, 1)
-        redis.sadd key, line_item_id
-        redis.sadd index_key, "#{options[:type]}:#{options[:id]}"
-        redis.set index_key_for(options), line_item_id
+      redis.pipelined do |pipe|
+        pipe.mapped_hmset("cartman:line_item:#{line_item_id}", options.compact)
+        pipe.hincrby("cartman:line_item:#{line_item_id}", :_version, 1)
+        pipe.sadd key, line_item_id
+        pipe.sadd index_key, "#{options[:type]}:#{options[:id]}"
+        pipe.set index_key_for(options), line_item_id
       end
       touch
       get_item(line_item_id)
@@ -103,9 +103,9 @@ module Cartman
       keys << index_key
       keys << index_keys
       keys.flatten!
-      redis.pipelined do
+      redis.pipelined do |pipe|
         keys.each do |key|
-          redis.del key
+          pipe.del key
         end
       end
     end
@@ -113,14 +113,14 @@ module Cartman
     def touch
       keys_to_expire = line_item_keys
       keys_to_expire << key
-      if redis.exists index_key
+      if redis.exists(index_key) == 1
         keys_to_expire << index_key
         keys_to_expire << index_keys
         keys_to_expire.flatten!
       end
-      redis.pipelined do
+      redis.pipelined do |pipe|
         keys_to_expire.each do |item|
-          redis.expire item, Cartman.config.cart_expires_in
+          pipe.expire item, Cartman.config.cart_expires_in
         end
       end
       redis.hincrby self.class.versions_key, version_key, 1
@@ -131,7 +131,7 @@ module Cartman
     end
 
     def reassign(new_id)
-      if redis.exists key
+      if redis.exists(key) == 1
         new_index_keys = items.collect { |item|
           index_key_for(item, new_id)
         }
